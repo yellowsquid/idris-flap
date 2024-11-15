@@ -7,4 +7,16 @@ options = "--total"
 depends = contrib
 
 modules
-  = Flap.Parser
+  = Flap.Data.Assoc
+  , Flap.Data.Context
+  , Flap.Data.Context.Var
+  , Flap.Data.List
+  , Flap.Data.SnocList
+  , Flap.Data.SnocList.Elem
+  , Flap.Data.SnocList.Quantifiers
+  , Flap.Data.SnocList.Thinning
+  , Flap.Data.SnocList.Var
+  , Flap.Decidable
+  , Flap.Decidable.Either
+  , Flap.Decidable.Maybe
+  , Flap.Parser
