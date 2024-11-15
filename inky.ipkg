@@ -1,0 +1,10 @@
+package inky
+authors = "Greg Brown"
+sourcedir = "src"
+
+options = "--total"
+
+depends = contrib
+
+modules
+  = Inky.Parser
