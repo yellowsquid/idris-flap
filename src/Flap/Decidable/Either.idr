@@ -1,4 +1,4 @@
-module Inky.Decidable.Either
+module Flap.Decidable.Either
 
 import Data.So
 import Data.These

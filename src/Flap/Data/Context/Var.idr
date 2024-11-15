@@ -1,11 +1,11 @@
-module Inky.Data.Context.Var
+module Flap.Data.Context.Var
 
 import Data.DPair
 import Data.Singleton
-import Inky.Data.Context
-import Inky.Data.SnocList.Elem
-import Inky.Decidable
-import Inky.Decidable.Maybe
+import Flap.Data.Context
+import Flap.Data.SnocList.Elem
+import Flap.Decidable
+import Flap.Decidable.Maybe
 
 export
 prefix 2 %%, %%%

@@ -1,4 +1,4 @@
-module Inky.Data.List
+module Flap.Data.List
 
 public export
 data LengthOf : List a -> Type where

@@ -1,4 +1,4 @@
-module Inky.Parser
+module Flap.Parser
 
 import public Data.List.Quantifiers
 
@@ -10,10 +10,10 @@ import Data.List1
 import Data.Nat
 import Data.So
 import Data.String.Extra
-import Inky.Data.Context
-import Inky.Data.Context.Var
-import Inky.Data.SnocList.Quantifiers
-import Inky.Data.SnocList.Thinning
+import Flap.Data.Context
+import Flap.Data.Context.Var
+import Flap.Data.SnocList.Quantifiers
+import Flap.Data.SnocList.Thinning
 import Text.Lexer
 
 export

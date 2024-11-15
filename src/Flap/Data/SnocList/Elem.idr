@@ -1,15 +1,15 @@
-module Inky.Data.SnocList.Elem
+module Flap.Data.SnocList.Elem
 
 import public Data.SnocList.Elem
 
 import Data.DPair
 import Data.Nat
 import Data.Singleton
-import Inky.Decidable
-import Inky.Decidable.Maybe
-import Inky.Data.Assoc
-import Inky.Data.List
-import Inky.Data.SnocList
+import Flap.Decidable
+import Flap.Decidable.Maybe
+import Flap.Data.Assoc
+import Flap.Data.List
+import Flap.Data.SnocList
 
 export
 [HereThere] Uninhabited (Here {sx, x} ~=~ There {sx = sy, x = z, y} i) where

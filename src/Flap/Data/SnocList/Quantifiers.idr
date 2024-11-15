@@ -1,11 +1,11 @@
-module Inky.Data.SnocList.Quantifiers
+module Flap.Data.SnocList.Quantifiers
 
 import public Data.SnocList.Quantifiers
 
 import Data.List.Quantifiers
-import Inky.Data.SnocList
-import Inky.Data.SnocList.Elem
-import Inky.Decidable
+import Flap.Data.SnocList
+import Flap.Data.SnocList.Elem
+import Flap.Decidable
 
 public export
 (<><) : All p xs -> All p sx -> All p (xs <>< sx)

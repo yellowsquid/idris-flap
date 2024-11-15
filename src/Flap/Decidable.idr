@@ -1,6 +1,6 @@
-module Inky.Decidable
+module Flap.Decidable
 
-import public Inky.Decidable.Either
+import public Flap.Decidable.Either
 
 import Data.Bool
 import Data.Either

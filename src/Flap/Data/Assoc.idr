@@ -1,4 +1,4 @@
-module Inky.Data.Assoc
+module Flap.Data.Assoc
 
 export
 infix 2 :-

@@ -1,10 +1,10 @@
-module Inky.Data.SnocList.Var
+module Flap.Data.SnocList.Var
 
-import public Inky.Data.SnocList.Elem
+import public Flap.Data.SnocList.Elem
 
 import Data.Singleton
-import Inky.Data.SnocList
-import Inky.Decidable
+import Flap.Data.SnocList
+import Flap.Decidable
 
 export
 prefix 2 %%

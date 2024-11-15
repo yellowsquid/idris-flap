@@ -1,9 +1,9 @@
-module Inky.Data.Context
+module Flap.Data.Context
 
-import public Inky.Data.Assoc
-import public Inky.Data.SnocList
+import public Flap.Data.Assoc
+import public Flap.Data.SnocList
 
-import Inky.Data.SnocList.Quantifiers
+import Flap.Data.SnocList.Quantifiers
 
 -- Contexts --------------------------------------------------------------------
 

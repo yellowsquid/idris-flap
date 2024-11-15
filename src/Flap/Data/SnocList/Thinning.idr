@@ -1,12 +1,12 @@
-module Inky.Data.SnocList.Thinning
+module Flap.Data.SnocList.Thinning
 
 import Data.DPair
 import Data.Nat
-import Inky.Data.List
-import Inky.Data.SnocList
-import Inky.Data.SnocList.Var
-import Inky.Data.SnocList.Quantifiers
-import Inky.Decidable.Maybe
+import Flap.Data.List
+import Flap.Data.SnocList
+import Flap.Data.SnocList.Var
+import Flap.Data.SnocList.Quantifiers
+import Flap.Decidable.Maybe
 
 --------------------------------------------------------------------------------
 -- Thinnings -------------------------------------------------------------------

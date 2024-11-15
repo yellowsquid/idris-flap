@@ -1,4 +1,4 @@
-package inky
+package flap
 authors = "Greg Brown"
 sourcedir = "src"
 
@@ -7,4 +7,4 @@ options = "--total"
 depends = contrib
 
 modules
-  = Inky.Parser
+  = Flap.Parser

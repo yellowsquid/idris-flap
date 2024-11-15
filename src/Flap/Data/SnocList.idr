@@ -1,9 +1,9 @@
-module Inky.Data.SnocList
+module Flap.Data.SnocList
 
 import public Data.SnocList
 import public Data.SnocList.Operations
 
-import Inky.Decidable.Maybe
+import Flap.Decidable.Maybe
 
 public export
 data LengthOf : SnocList a -> Type where

@@ -1,8 +1,8 @@
-module Inky.Decidable.Maybe
+module Flap.Decidable.Maybe
 
 import Data.Maybe
 import Data.These
-import Inky.Decidable.Either
+import Flap.Decidable.Either
 
 public export
 WhenJust : (a -> Type) -> Type -> Maybe a -> Type
