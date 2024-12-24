@@ -1,4 +1,5 @@
 package flap
+version = "0.1.0"
 authors = "Greg Brown"
 sourcedir = "src"
 
