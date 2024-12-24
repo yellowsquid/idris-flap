@@ -11,3 +11,8 @@ public export
 lengthOf : (xs : List a) -> LengthOf xs
 lengthOf [] = Z
 lengthOf (x :: xs) = S (lengthOf xs)
+
+public export
+toNat : LengthOf xs -> Nat
+toNat Z = Z
+toNat (S len) = S (toNat len)

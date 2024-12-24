@@ -20,3 +20,8 @@ modules
   , Flap.Decidable.Either
   , Flap.Decidable.Maybe
   , Flap.Parser
+  , Flap.Parser.Core
+  , Flap.Parser.Result
+  , Flap.Parser.Run
+  , Flap.Parser.Suffix
+  , Flap.Parser.Types
