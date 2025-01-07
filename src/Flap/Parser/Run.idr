@@ -27,7 +27,7 @@ ParseResult xs equal t = Result (ParseErr i) xs equal t
 ||| * `nils` has at most one `True` element
 ||| * `sets` are disjoint
 lookahead :
-  Eq i => Set i t =>
+  Set i t =>
   (x : Maybe i) ->
   (nils : List Bool) ->
   (sets : Lazy (All (const t) nils)) ->
@@ -41,7 +41,7 @@ lookahead x (nil :: nils) (set :: sets) =
   <|> (if nil then Just (Here ()) else Nothing)
 
 parser :
-  (e : Eq i) => (set : Set i t) =>
+  (set : Set i t) =>
   (p : Parser i nil locked free a) ->
   (penv1 : All (Assoc0 $ const t) locked) ->
   (penv2 : All (Assoc0 $ const t) free) ->
@@ -58,7 +58,7 @@ parser :
     free ->
   ParseResult xs nil a
 parserChain :
-  (e : Eq i) => (set : Set i t) =>
+  (set : Set i t) =>
   (ps : ParserChain i nil locked free as) ->
   (penv1 : All (Assoc0 $ const t) locked) ->
   (penv2 : All (Assoc0 $ const t) free) ->
@@ -75,7 +75,7 @@ parserChain :
     free ->
   ParseResult xs nil (HList as)
 parserOneOf :
-  (e : Eq i) => (set : Set i t) =>
+  (set : Set i t) =>
   {nils : List Bool} ->
   (at : Any (const ()) nils) ->
   (ps : All (\nil => Parser i nil locked free a) nils) ->
@@ -96,17 +96,18 @@ parserOneOf :
 
 parser (Var x) penv1 penv2 xs env1 env2 = (indexAll x.pos env2).value xs Refl
 parser (Lit text) penv1 penv2 xs env1 env2 =
+  let toks : t = singleton text in
   case xs of
     [] => Err (BadEOF [text])
     (x :: xs) =>
-      if x.val.kind == text
+      if x.val.kind `member` toks
       then Ok x.val.text xs (Step Refl)
       else Err (Unexpected [text] x)
 parser (Seq ps) penv1 penv2 xs env1 env2 =
   parserChain ps penv1 penv2 xs env1 env2
 parser (OneOf {nils} ps) penv1 penv2 [] env1 env2 =
   let sets = peekAll penv2 ps in
-  case lookahead @{%search} @{set} Nothing nils sets of
+  case lookahead @{set} Nothing nils sets of
     Nothing => Err (BadEOF $ foldMap toList $ forget sets)
     Just at => parserOneOf at ps penv1 penv2 [] env1 env2
 parser (OneOf {nils} ps) penv1 penv2 (x :: xs) env1 env2 =
@@ -180,8 +181,8 @@ parserOneOf {nils = nil :: nils} (There at) (p :: ps) penv1 penv2 xs env1 env2 =
 
 export
 parse :
-  (e : Eq i) => (set : Set i t) =>
+  (set : Set i t) =>
   (p : Parser i nil [<] [<] a) ->
   {auto 0 wf : collectTypeErrs @{set} [<] [<] [<] [<] p = []} ->
   (xs : List (WithBounds (Token i))) -> ParseResult xs nil a
-parse p xs = parser @{e} @{set} p [<] [<] xs [<] [<]
+parse p xs = parser @{set} p [<] [<] xs [<] [<]
