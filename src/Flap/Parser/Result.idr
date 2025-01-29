@@ -32,3 +32,8 @@ export
 wkn : (0 f : So b1 -> So b2) -> Result e xs b1 t -> Result e xs b2 t
 wkn f (Ok res ys prf) = Ok res ys (wkn f prf)
 wkn f (Err e) = Err e
+
+public export
+record ParseT (state, error, tok : Type) (equal : Bool) (t : state -> Type) where
+  constructor MkParseT
+  runParser : (s : state) -> (xs : List tok) -> Result error xs equal (t s)
