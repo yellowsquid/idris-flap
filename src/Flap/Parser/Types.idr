@@ -5,28 +5,28 @@ import Data.So
 import Flap.Parser.Core
 
 public export
-interface Monoid t => Set (0 i : Type) t where
-  singleton : i -> t
-  member : i -> t -> Bool
+interface Monoid t => Set (0 tok : Type) t where
+  singleton : tok -> t
+  member : tok -> t -> Bool
   intersect : t -> t -> t
-  toList : t -> List i
+  toList : t -> List tok
 
 public export
 peek :
-  Set i t =>
+  Set tok t =>
   (env : All (Assoc0 $ const t) free) ->
-  Parser i nil locked free a -> t
+  Parser state tok nil locked free a -> t
 public export
 peekChain :
-  Set i t =>
+  Set tok t =>
   (env : All (Assoc0 $ const t) free) ->
-  ParserChain i nil locked free a -> t
+  ParserChain state tok nil locked free a -> t
 public export
 peekAll :
-  Set i t =>
+  Set tok t =>
   (env : All (Assoc0 $ const t) free) ->
   {0 nils : List Bool} ->
-  All (\nil => Parser i nil locked free a) nils ->
+  All (\nil => Parser state tok nil locked free a) nils ->
   All (const t) nils
 
 peek env (Var x) = (indexAll x.pos env).value
@@ -35,6 +35,7 @@ peek env (Seq ps) = peekChain env ps
 peek env (OneOf ps) = foldMap id (forget $ peekAll env ps)
 peek env (Fix x p) = peek env p
 peek env (Map f p) = peek env p
+peek env (WithState f p) = peek env p
 peek env (WithBounds p) = peek env p
 
 peekChain env [] = neutral
@@ -46,29 +47,29 @@ peekAll env (p :: ps) = peek env p :: peekAll env ps
 
 public export
 follow :
-  Set i t =>
+  Set tok t =>
   (penv1 : All (Assoc0 $ const t) locked) ->
   (penv2 : All (Assoc0 $ const t) free) ->
   (fenv1 : All (Assoc0 $ const t) locked) ->
   (fenv2 : All (Assoc0 $ const t) free) ->
-  Parser i nil locked free a -> t
+  Parser state tok nil locked free a -> t
 public export
 followChain :
-  Set i t =>
+  Set tok t =>
   (penv1 : All (Assoc0 $ const t) locked) ->
   (penv2 : All (Assoc0 $ const t) free) ->
   (fenv1 : All (Assoc0 $ const t) locked) ->
   (fenv2 : All (Assoc0 $ const t) free) ->
-  ParserChain i nil locked free a -> t
+  ParserChain state tok nil locked free a -> t
 public export
 followAll :
-  Set i t =>
+  Set tok t =>
   (penv1 : All (Assoc0 $ const t) locked) ->
   (penv2 : All (Assoc0 $ const t) free) ->
   (fenv1 : All (Assoc0 $ const t) locked) ->
   (fenv2 : All (Assoc0 $ const t) free) ->
   {0 nils : List Bool} ->
-  All (\nil => Parser i nil locked free a) nils ->
+  All (\nil => Parser state tok nil locked free a) nils ->
   t
 
 follow penv1 penv2 fenv1 fenv2 (Var x) = (indexAll x.pos fenv2).value
@@ -82,6 +83,7 @@ follow penv1 penv2 fenv1 fenv2 (Fix x p) =
   --   - no step depends on existing information
   follow (penv1 :< (x :- peek penv2 p)) penv2 (fenv1 :< (x :- neutral)) fenv2 p
 follow penv1 penv2 fenv1 fenv2 (Map f p) = follow penv1 penv2 fenv1 fenv2 p
+follow penv1 penv2 fenv1 fenv2 (WithState f p) = follow penv1 penv2 fenv1 fenv2 p
 follow penv1 penv2 fenv1 fenv2 (WithBounds p) = follow penv1 penv2 fenv1 fenv2 p
 
 followChain penv1 penv2 fenv1 fenv2 [] = neutral
@@ -104,52 +106,52 @@ followAll penv1 penv2 fenv1 fenv2 (p :: ps) =
   followAll penv1 penv2 fenv1 fenv2 ps
 
 public export
-data Err : (i : Type) -> Type where
-  AltAmbiguous : List (List i) -> Err i
-  SeqAmbiguous : List (List i) -> Err i
-  ChainPos : Nat -> Err i -> Err i
-  Branch : Nat -> Err i -> Err i
+data Err : (tok : Type) -> Type where
+  AltAmbiguous : List (List tok) -> Err tok
+  SeqAmbiguous : List (List tok) -> Err tok
+  ChainPos : Nat -> Err tok -> Err tok
+  Branch : Nat -> Err tok -> Err tok
 
 public export
 enumerate : List a -> List (Nat, a)
 enumerate = reverse . fst . foldl (\(acc, n), x => ((n, x) :: acc, S n)) ([], 0)
 
 public export
-disjoint : (set : Set i t) => List t -> Bool
+disjoint : (set : Set tok t) => List t -> Bool
 disjoint [] = True
 disjoint (xs :: xss) =
   all (null . toList @{set} . intersect @{set} xs) xss && disjoint @{set} xss
 
 public export
 collectTypeErrs :
- (set : Set i t) =>
+ (set : Set tok t) =>
  (penv1 : All (Assoc0 $ const t) locked) ->
  (penv2 : All (Assoc0 $ const t) free) ->
  (fenv1 : All (Assoc0 $ const t) locked) ->
  (fenv2 : All (Assoc0 $ const t) free) ->
- Parser i nil locked free a ->
- List (Err i)
+ Parser state tok nil locked free a ->
+ List (Err tok)
 
 public export
 collectChainTypeErrs:
- (set : Set i t) =>
+ (set : Set tok t) =>
  (penv1 : All (Assoc0 $ const t) locked) ->
  (penv2 : All (Assoc0 $ const t) free) ->
  (fenv1 : All (Assoc0 $ const t) locked) ->
  (fenv2 : All (Assoc0 $ const t) free) ->
- ParserChain i nil locked free a ->
- List (List (Err i))
+ ParserChain state tok nil locked free a ->
+ List (List (Err tok))
 
 public export
 collectAllTypeErrs:
- Set i t =>
+ Set tok t =>
  (penv1 : All (Assoc0 $ const t) locked) ->
  (penv2 : All (Assoc0 $ const t) free) ->
  (fenv1 : All (Assoc0 $ const t) locked) ->
  (fenv2 : All (Assoc0 $ const t) free) ->
  {0 nils : List Bool} ->
- All (\nil => Parser i nil locked free a) nils ->
- List (List (Err i))
+ All (\nil => Parser state tok nil locked free a) nils ->
+ List (List (Err tok))
 
 collectTypeErrs penv1 penv2 fenv1 fenv2 (Var j) = []
 collectTypeErrs penv1 penv2 fenv1 fenv2 (Lit text) = []
@@ -170,8 +172,10 @@ collectTypeErrs penv1 penv2 fenv1 fenv2 (Fix x p) =
     (fenv1 :< (x :- followed))
     fenv2
     p
-collectTypeErrs penv1 penv2 fenv1 fenv2 (Map f p) = collectTypeErrs
-  penv1 penv2 fenv1 fenv2 p
+collectTypeErrs penv1 penv2 fenv1 fenv2 (Map f p) =
+  collectTypeErrs penv1 penv2 fenv1 fenv2 p
+collectTypeErrs penv1 penv2 fenv1 fenv2 (WithState f p) =
+  collectTypeErrs penv1 penv2 fenv1 fenv2 p
 collectTypeErrs penv1 penv2 fenv1 fenv2 (WithBounds p) =
   collectTypeErrs penv1 penv2 fenv1 fenv2 p
 
