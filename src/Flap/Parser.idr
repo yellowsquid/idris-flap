@@ -7,19 +7,12 @@ import Data.List1
 -- Functor ---------------------------------------------------------------------
 
 public export
-(++) :
-  {nil2 : Bool} ->
-  ParserChain state tok nil1 locked free as ->
-  ParserChain state tok nil2 (linUnless nil1 locked) (free ++ linUnless (not nil1) locked) bs ->
-  ParserChain state tok (nil1 && nil2) locked free (as ++ bs)
-[] ++ qs = qs
-((::) {nil1 = False, nil2} p ps) ++ qs =
-  p ::
-  (  ps
-  ++ rewrite linUnlessLin (Bool, state -> Type) nil2 in
-     rewrite linUnlessLin (Bool, state -> Type) (not nil2) in
-     qs)
-((::) {nil1 = True, nil2} p ps) ++ qs = p :: (ps ++ qs)
+(::) :
+  {nil1, nil2 : Bool} ->
+  Parser state tok nil1 locked free a ->
+  ParserChain state tok nil2 (linUnless nil1 locked) (free ++ linUnless (not nil1) locked) as ->
+  ParserChain state tok (nil1 && nil2) locked free (MkStage a (\s, _ => s) :: as)
+p :: ps = Update p (\s, _ => s) ps
 
 %inline
 public export

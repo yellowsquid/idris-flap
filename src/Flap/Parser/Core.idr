@@ -6,6 +6,7 @@ import public Flap.Data.Context
 import public Flap.Data.Context.Var
 import public Flap.Data.SnocList.Quantifiers
 import public Flap.Data.SnocList.Thinning
+import public Flap.Parser.Sequence
 import public Text.Bounded
 
 -- Parser Expressions ----------------------------------------------------------
@@ -36,15 +37,15 @@ data ParserChain :
   (state, tok : Type) ->
   (nil : Bool) ->
   (locked, free : Context (Bool, state -> Type)) ->
-  List (state -> Type) ->
+  List (Stage state) ->
   Type
 
 data Parser where
   Var : Var free (nil, a) -> Parser state tok nil locked free a
   Lit : (text : tok) -> Parser state tok False locked free (const String)
   Seq :
-    ParserChain state tok nil locked free as ->
-    Parser state tok nil locked free (\s => HList (map (\a => a s) as))
+    ParserChain state tok nil locked free stages ->
+    Parser state tok nil locked free (flip Sequence stages)
   OneOf :
     {nils : List Bool} ->
     All (\nil => Parser state tok nil locked free a) nils ->
@@ -58,21 +59,18 @@ data Parser where
     ({s : state} -> a s -> Either String (b s)) ->
     Parser state tok nil locked free a ->
     Parser state tok nil locked free b
-  WithState :
-    (f : state -> state) ->
-    Parser state tok nil locked free a ->
-    Parser state tok nil locked free (a . f)
   WithBounds :
     Parser state tok nil locked free a ->
     Parser state tok nil locked free (WithBounds . a)
 
 data ParserChain where
   Nil : ParserChain state tok True locked free []
-  (::) :
+  Update :
     {nil1, nil2 : Bool} ->
     Parser state tok nil1 locked free a ->
+    (f : (s : state) -> a s -> state) ->
     ParserChain state tok nil2 (linUnless nil1 locked) (free ++ linUnless (not nil1) locked) as ->
-    ParserChain state tok (nil1 && nil2) locked free (a :: as)
+    ParserChain state tok (nil1 && nil2) locked free (MkStage a f :: as)
 
 %name Parser p, q
 %name ParserChain ps, qs
@@ -108,12 +106,13 @@ rename f g (Seq ps) = Seq (renameChain f g ps)
 rename f g (OneOf ps) = OneOf (renameAll f g ps)
 rename f g (Fix x p) = Fix x (rename (Keep f) g p)
 rename f g (Map h p) = Map h (rename f g p)
-rename f g (WithState h p) = WithState h (rename f g p)
 rename f g (WithBounds p) = WithBounds (rename f g p)
 
 renameChain f g [] = []
-renameChain f g ((::) {nil1 = False} p ps) = rename f g p :: renameChain Id (append g f) ps
-renameChain f g ((::) {nil1 = True} p ps) = rename f g p :: renameChain f g ps
+renameChain f g (Update {nil1 = False} p h ps) =
+  Update (rename f g p) h (renameChain Id (append g f) ps)
+renameChain f g (Update {nil1 = True} p h ps) =
+  Update (rename f g p) h (renameChain f g ps)
 
 renameAll f g [] = []
 renameAll f g (p :: ps) = rename f g p :: renameAll f g ps
@@ -144,17 +143,16 @@ weaken len1 (Seq ps) = Seq (weakenChain len1 ps)
 weaken len1 (OneOf ps) = OneOf (weakenAll len1 ps)
 weaken len1 (Fix x p) = Fix x (weaken len1 p)
 weaken len1 (Map f p) = Map f (weaken len1 p)
-weaken len1 (WithState f p) = WithState f (weaken len1 p)
 weaken len1 (WithBounds p) = WithBounds (weaken len1 p)
 
 weakenChain len1 [] = []
-weakenChain len1 ((::) {nil1 = False} p ps) = weaken len1 p :: renameChain Id (assoc len2) ps
-weakenChain len1 ((::) {nil1 = True} p ps) = weaken len1 p :: weakenChain len1 ps
+weakenChain len1 (Update {nil1 = False} p f ps) = Update (weaken len1 p) f (renameChain Id (assoc len2) ps)
+weakenChain len1 (Update {nil1 = True} p f ps) = Update (weaken len1 p) f (weakenChain len1 ps)
 
 weakenAll len1 [] = []
 weakenAll len1 (p :: ps) = weaken len1 p :: weakenAll len1 ps
 
--- -- Substitution ----------------------------------------------------------------
+-- Substitution ----------------------------------------------------------------
 
 public export
 sub :
@@ -190,14 +188,12 @@ sub f g (Fix x p) =
     (mapProperty (map $ rename (Drop Id) Id) g)
     p
 sub f g (Map h p) = Map h (sub f g p)
-sub f g (WithState h p) = WithState h (sub f g p)
 sub f g (WithBounds p) = WithBounds (sub f g p)
 
 subChain f g [] = []
-subChain f g ((::) {nil1 = False} p ps) =
-  sub f g p ::
-  subChain [<] (mapProperty (map $ weaken len) g ++ f) ps
-subChain f g ((::) {nil1 = True} p ps) = sub f g p :: subChain f g ps
+subChain f g (Update {nil1 = False} p h ps) =
+  Update (sub f g p) h (subChain [<] (mapProperty (map $ weaken len) g ++ f) ps)
+subChain f g (Update {nil1 = True} p h ps) = Update (sub f g p) h (subChain f g ps)
 
 subAll f g [] = []
 subAll f g (p :: ps) = sub f g p :: subAll f g ps
