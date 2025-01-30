@@ -26,7 +26,7 @@ linUnlessLin a True = Refl
 
 public export
 data Parser :
-  (state, tok : Type) ->
+  (state, error, tok : Type) ->
   (nil : Bool) ->
   (locked, free : Context (Bool, state -> Type)) ->
   (state -> Type) ->
@@ -34,43 +34,43 @@ data Parser :
 
 public export
 data ParserChain :
-  (state, tok : Type) ->
+  (state, error, tok : Type) ->
   (nil : Bool) ->
   (locked, free : Context (Bool, state -> Type)) ->
   List (Stage state) ->
   Type
 
 data Parser where
-  Var : Var free (nil, a) -> Parser state tok nil locked free a
-  Lit : (text : tok) -> Parser state tok False locked free (const String)
+  Var : Var free (nil, a) -> Parser state error tok nil locked free a
+  Lit : (text : tok) -> Parser state error tok False locked free (const String)
   Seq :
-    ParserChain state tok nil locked free stages ->
-    Parser state tok nil locked free (flip Sequence stages)
+    ParserChain state error tok nil locked free stages ->
+    Parser state error tok nil locked free (flip Sequence stages)
   OneOf :
     {nils : List Bool} ->
-    All (\nil => Parser state tok nil locked free a) nils ->
+    All (\nil => Parser state error tok nil locked free a) nils ->
     {auto 0 prf : length (filter Basics.id nils) `LTE` 1} ->
-    Parser state tok (any Basics.id nils) locked free a
+    Parser state error tok (any Basics.id nils) locked free a
   Fix :
     (0 x : String) ->
-    Parser state tok nil (locked :< (x :- (nil, a))) free a ->
-    Parser state tok nil locked free a
+    Parser state error tok nil (locked :< (x :- (nil, a))) free a ->
+    Parser state error tok nil locked free a
   Map :
-    ({s : state} -> a s -> Either String (b s)) ->
-    Parser state tok nil locked free a ->
-    Parser state tok nil locked free b
+    ({s : state} -> a s -> Either error (b s)) ->
+    Parser state error tok nil locked free a ->
+    Parser state error tok nil locked free b
   WithBounds :
-    Parser state tok nil locked free a ->
-    Parser state tok nil locked free (WithBounds . a)
+    Parser state error tok nil locked free a ->
+    Parser state error tok nil locked free (WithBounds . a)
 
 data ParserChain where
-  Nil : ParserChain state tok True locked free []
+  Nil : ParserChain state error tok True locked free []
   Update :
     {nil1, nil2 : Bool} ->
-    Parser state tok nil1 locked free a ->
+    Parser state error tok nil1 locked free a ->
     (f : (s : state) -> a s -> state) ->
-    ParserChain state tok nil2 (linUnless nil1 locked) (free ++ linUnless (not nil1) locked) as ->
-    ParserChain state tok (nil1 && nil2) locked free (MkStage a f :: as)
+    ParserChain state error tok nil2 (linUnless nil1 locked) (free ++ linUnless (not nil1) locked) as ->
+    ParserChain state error tok (nil1 && nil2) locked free (MkStage a f :: as)
 
 %name Parser p, q
 %name ParserChain ps, qs
@@ -82,23 +82,23 @@ rename :
   locked1 `Thins` locked2 ->
   free1 `Thins` free2 ->
   {auto len : LengthOf locked2} ->
-  Parser state tok nil locked1 free1 a ->
-  Parser state tok nil locked2 free2 a
+  Parser state error tok nil locked1 free1 a ->
+  Parser state error tok nil locked2 free2 a
 public export
 renameChain :
   locked1 `Thins` locked2 ->
   free1 `Thins` free2 ->
   {auto len : LengthOf locked2} ->
-  ParserChain state tok nil locked1 free1 a ->
-  ParserChain state tok nil locked2 free2 a
+  ParserChain state error tok nil locked1 free1 a ->
+  ParserChain state error tok nil locked2 free2 a
 public export
 renameAll :
   locked1 `Thins` locked2 ->
   free1 `Thins` free2 ->
   {auto len : LengthOf locked2} ->
   {0 nils : List Bool} ->
-  All (\nil => Parser state tok nil locked1 free1 a) nils ->
-  All (\nil => Parser state tok nil locked2 free2 a) nils
+  All (\nil => Parser state error tok nil locked1 free1 a) nils ->
+  All (\nil => Parser state error tok nil locked2 free2 a) nils
 
 rename f g (Var tok) = Var (toVar $ indexPos g tok.pos)
 rename f g (Lit text) = Lit text
@@ -121,21 +121,21 @@ public export
 weaken :
   (len1 : LengthOf free2) ->
   {auto len2 : LengthOf locked} ->
-  Parser state tok nil (free2 ++ locked) free1 a ->
-  Parser state tok nil locked (free1 ++ free2) a
+  Parser state error tok nil (free2 ++ locked) free1 a ->
+  Parser state error tok nil locked (free1 ++ free2) a
 public export
 weakenChain :
   (len1 : LengthOf free2) ->
   {auto len2 : LengthOf locked} ->
-  ParserChain state tok nil (free2 ++ locked) free1 a ->
-  ParserChain state tok nil locked (free1 ++ free2) a
+  ParserChain state error tok nil (free2 ++ locked) free1 a ->
+  ParserChain state error tok nil locked (free1 ++ free2) a
 public export
 weakenAll :
   (len1 : LengthOf free2) ->
   {auto len2 : LengthOf locked} ->
   {0 nils : List Bool} ->
-  All (\nil => Parser state tok nil (free2 ++ locked) free1 a) nils ->
-  All (\nil => Parser state tok nil locked (free1 ++ free2) a) nils
+  All (\nil => Parser state error tok nil (free2 ++ locked) free1 a) nils ->
+  All (\nil => Parser state error tok nil locked (free1 ++ free2) a) nils
 
 weaken len1 (Var x) = Var (wknL x)
 weaken len1 (Lit text) = Lit text
@@ -157,25 +157,25 @@ weakenAll len1 (p :: ps) = weaken len1 p :: weakenAll len1 ps
 public export
 sub :
   {auto len : LengthOf locked2} ->
-  (f : All (Assoc0 $ (\nilA => Parser state tok (fst nilA) [<] (free2 ++ locked2) (snd nilA))) locked1) ->
-  (g : All (Assoc0 $ (\nilA => Parser state tok (fst nilA) locked2 free2 (snd nilA))) free1) ->
-  Parser state tok nil locked1 free1 a ->
-  Parser state tok nil locked2 free2 a
+  (f : All (Assoc0 $ (\nilA => Parser state error tok (fst nilA) [<] (free2 ++ locked2) (snd nilA))) locked1) ->
+  (g : All (Assoc0 $ (\nilA => Parser state error tok (fst nilA) locked2 free2 (snd nilA))) free1) ->
+  Parser state error tok nil locked1 free1 a ->
+  Parser state error tok nil locked2 free2 a
 public export
 subChain :
   {auto len : LengthOf locked2} ->
-  (f : All (Assoc0 $ (\nilA => Parser state tok (fst nilA) [<] (free2 ++ locked2) (snd nilA))) locked1) ->
-  (g : All (Assoc0 $ (\nilA => Parser state tok (fst nilA) locked2 free2 (snd nilA))) free1) ->
-  ParserChain state tok nil locked1 free1 as ->
-  ParserChain state tok nil locked2 free2 as
+  (f : All (Assoc0 $ (\nilA => Parser state error tok (fst nilA) [<] (free2 ++ locked2) (snd nilA))) locked1) ->
+  (g : All (Assoc0 $ (\nilA => Parser state error tok (fst nilA) locked2 free2 (snd nilA))) free1) ->
+  ParserChain state error tok nil locked1 free1 as ->
+  ParserChain state error tok nil locked2 free2 as
 public export
 subAll :
   {auto len : LengthOf locked2} ->
-  (f : All (Assoc0 $ (\nilA => Parser state tok (fst nilA) [<] (free2 ++ locked2) (snd nilA))) locked1) ->
-  (g : All (Assoc0 $ (\nilA => Parser state tok (fst nilA) locked2 free2 (snd nilA))) free1) ->
+  (f : All (Assoc0 $ (\nilA => Parser state error tok (fst nilA) [<] (free2 ++ locked2) (snd nilA))) locked1) ->
+  (g : All (Assoc0 $ (\nilA => Parser state error tok (fst nilA) locked2 free2 (snd nilA))) free1) ->
   {0 nils : List Bool} ->
-  All (\nil => Parser state tok nil locked1 free1 a) nils ->
-  All (\nil => Parser state tok nil locked2 free2 a) nils
+  All (\nil => Parser state error tok nil locked1 free1 a) nils ->
+  All (\nil => Parser state error tok nil locked2 free2 a) nils
 
 sub f g (Var x) = (indexAll x.pos g).value
 sub f g (Lit text) = Lit text
