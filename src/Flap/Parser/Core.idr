@@ -62,6 +62,10 @@ data Parser where
   WithBounds :
     Parser state error tok nil locked free a ->
     Parser state error tok nil locked free (WithBounds . a)
+  Forget :
+    (f : state1 -> state2) ->
+    Parser state2 error tok nil [<] [<] a ->
+    Parser state1 error tok nil locked free (a . f)
 
 data ParserChain where
   Nil : ParserChain state error tok True locked free []
@@ -107,6 +111,7 @@ rename f g (OneOf ps) = OneOf (renameAll f g ps)
 rename f g (Fix x p) = Fix x (rename (Keep f) g p)
 rename f g (Map h p) = Map h (rename f g p)
 rename f g (WithBounds p) = WithBounds (rename f g p)
+rename f g (Forget h p) = Forget h p
 
 renameChain f g [] = []
 renameChain f g (Update {nil1 = False} p h ps) =
@@ -144,6 +149,7 @@ weaken len1 (OneOf ps) = OneOf (weakenAll len1 ps)
 weaken len1 (Fix x p) = Fix x (weaken len1 p)
 weaken len1 (Map f p) = Map f (weaken len1 p)
 weaken len1 (WithBounds p) = WithBounds (weaken len1 p)
+weaken len1 (Forget f p) = Forget f p
 
 weakenChain len1 [] = []
 weakenChain len1 (Update {nil1 = False} p f ps) = Update (weaken len1 p) f (renameChain Id (assoc len2) ps)
@@ -189,6 +195,7 @@ sub f g (Fix x p) =
     p
 sub f g (Map h p) = Map h (sub f g p)
 sub f g (WithBounds p) = WithBounds (sub f g p)
+sub f g (Forget h p) = Forget h p
 
 subChain f g [] = []
 subChain f g (Update {nil1 = False} p h ps) =

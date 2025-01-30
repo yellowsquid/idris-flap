@@ -153,6 +153,8 @@ parser (WithBounds p) penv1 penv2 xs s env1 env2 =
   bounds : (xs : List (WithBounds (Token tok))) -> (Bool, Bounds)
   bounds [] = (True, MkBounds 0 0 0 0)
   bounds (x :: xs) = (x.isIrrelevant, x.bounds)
+parser (Forget f p) penv1 penv2 xs s env1 env2 =
+  parser @{set} p [<] [<] xs (f s) [<] [<]
 
 parserChain [] penv1 penv2 xs s env1 env2 = Ok [] xs Refl
 parserChain (Update {nil1 = False, nil2} p f ps) penv1 penv2 xs s env1 env2 = do
