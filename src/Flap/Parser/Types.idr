@@ -36,6 +36,7 @@ peek env (OneOf ps) = foldMap id (forget $ peekAll env ps)
 peek env (Fix x p) = peek env p
 peek env (Map f p) = peek env p
 peek env (WithBounds p) = peek env p
+peek env (Forget f p) = peek [<] p
 
 peekChain env [] = neutral
 peekChain env (Update {nil1 = False} p f ps) = peek env p
@@ -83,6 +84,7 @@ follow penv1 penv2 fenv1 fenv2 (Fix x p) =
   follow (penv1 :< (x :- peek penv2 p)) penv2 (fenv1 :< (x :- neutral)) fenv2 p
 follow penv1 penv2 fenv1 fenv2 (Map f p) = follow penv1 penv2 fenv1 fenv2 p
 follow penv1 penv2 fenv1 fenv2 (WithBounds p) = follow penv1 penv2 fenv1 fenv2 p
+follow penv1 penv2 fenv1 fenv2 (Forget f p) = follow [<] [<] [<] [<] p
 
 followChain penv1 penv2 fenv1 fenv2 [] = neutral
 followChain penv1 penv2 fenv1 fenv2 (Update {nil1 = False, nil2} p f ps) =
@@ -174,6 +176,8 @@ collectTypeErrs penv1 penv2 fenv1 fenv2 (Map f p) =
   collectTypeErrs penv1 penv2 fenv1 fenv2 p
 collectTypeErrs penv1 penv2 fenv1 fenv2 (WithBounds p) =
   collectTypeErrs penv1 penv2 fenv1 fenv2 p
+collectTypeErrs penv1 penv2 fenv1 fenv2 (Forget f p) =
+  collectTypeErrs @{set} [<] [<] [<] [<] p
 
 collectChainTypeErrs penv1 penv2 fenv1 fenv2 [] = []
 collectChainTypeErrs penv1 penv2 fenv1 fenv2 (Update {nil1 = False} p f ps) =
