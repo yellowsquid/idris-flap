@@ -80,7 +80,7 @@ parserChain :
       (s : state) ->
       uncurry (ParseResult s ys) x))
     free ->
-  ParseResult s xs nil (\s => HList (map (\a => a s) as))
+  ParseResult s xs nil (flip Sequence as)
 parserOneOf :
   (set : Set tok t) =>
   {nils : List Bool} ->
@@ -144,8 +144,6 @@ parser (Map f p) penv1 penv2 xs s env1 env2 =
       case f res of
         Left err => Err (MapFail err)
         Right res' => Ok res' ys prf
-parser (WithState f p) penv1 penv2 xs s env1 env2 =
-  parser p penv1 penv2 xs (f s) env1 env2
 parser (WithBounds p) penv1 penv2 xs s env1 env2 =
   let (irrel, bnds) = bounds xs in
   (\x => MkBounded x irrel bnds) <$> parser p penv1 penv2 xs s env1 env2
@@ -155,18 +153,18 @@ parser (WithBounds p) penv1 penv2 xs s env1 env2 =
   bounds (x :: xs) = (x.isIrrelevant, x.bounds)
 
 parserChain [] penv1 penv2 xs s env1 env2 = Ok [] xs Refl
-parserChain ((::) {nil1 = False, nil2} p ps) penv1 penv2 xs s env1 env2 = do
+parserChain (Update {nil1 = False, nil2} p f ps) penv1 penv2 xs s env1 env2 = do
   x <- parser p penv1 penv2 xs s env1 env2
-  xs <- parserChain ps [<] (penv2 ++ penv1) _ s
+  xs <- parserChain ps [<] (penv2 ++ penv1) _ (f s x)
           [<]
           (  mapProperty (map (\f, zs, 0 prf, s => f zs (wkn (const Oh) $ trans {b2 = False} prf %search) s)) env2
           ++ mapProperty (map (\f, zs, 0 prf, s => f zs (trans {b2 = False} prf %search) s)) env1
           )
   pure (x :: xs)
-parserChain ((::) {nil1 = True, nil2} p ps) penv1 penv2 xs s env1 env2 = do
+parserChain (Update {nil1 = True, nil2} p f ps) penv1 penv2 xs s env1 env2 = do
   x <- parser p penv1 penv2 xs s env1 env2
   rewrite sym $ andTrueNeutral nil2
-  xs <- parserChain ps penv1 penv2 _ s
+  xs <- parserChain ps penv1 penv2 _ (f s x)
           (mapProperty (map (\f, zs, prf => f zs $ trans {b2 = True} prf %search)) env1)
           (mapProperty (map (\f, zs, prf => f zs $ trans {b2 = True} prf %search)) env2)
   pure (x :: xs)

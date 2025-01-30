@@ -24,5 +24,6 @@ modules
   , Flap.Parser.Core
   , Flap.Parser.Result
   , Flap.Parser.Run
+  , Flap.Parser.Sequence
   , Flap.Parser.Suffix
   , Flap.Parser.Types

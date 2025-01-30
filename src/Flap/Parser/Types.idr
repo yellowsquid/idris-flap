@@ -35,12 +35,11 @@ peek env (Seq ps) = peekChain env ps
 peek env (OneOf ps) = foldMap id (forget $ peekAll env ps)
 peek env (Fix x p) = peek env p
 peek env (Map f p) = peek env p
-peek env (WithState f p) = peek env p
 peek env (WithBounds p) = peek env p
 
 peekChain env [] = neutral
-peekChain env ((::) {nil1 = False} p ps) = peek env p
-peekChain env ((::) {nil1 = True} p ps) = peek env p <+> peekChain env ps
+peekChain env (Update {nil1 = False} p f ps) = peek env p
+peekChain env (Update {nil1 = True} p f ps) = peek env p <+> peekChain env ps
 
 peekAll env [] = []
 peekAll env (p :: ps) = peek env p :: peekAll env ps
@@ -83,17 +82,16 @@ follow penv1 penv2 fenv1 fenv2 (Fix x p) =
   --   - no step depends on existing information
   follow (penv1 :< (x :- peek penv2 p)) penv2 (fenv1 :< (x :- neutral)) fenv2 p
 follow penv1 penv2 fenv1 fenv2 (Map f p) = follow penv1 penv2 fenv1 fenv2 p
-follow penv1 penv2 fenv1 fenv2 (WithState f p) = follow penv1 penv2 fenv1 fenv2 p
 follow penv1 penv2 fenv1 fenv2 (WithBounds p) = follow penv1 penv2 fenv1 fenv2 p
 
 followChain penv1 penv2 fenv1 fenv2 [] = neutral
-followChain penv1 penv2 fenv1 fenv2 ((::) {nil1 = False, nil2} p ps) =
+followChain penv1 penv2 fenv1 fenv2 (Update {nil1 = False, nil2} p f ps) =
   let xs = followChain [<] (penv2 ++ penv1) [<] (fenv2 ++ fenv1) ps in
   foldMap {t = List} id
     ( if nil2
       then [xs, peekChain (penv2 ++ penv1) ps, follow penv1 penv2 fenv1 fenv2 p]
       else [xs])
-followChain penv1 penv2 fenv1 fenv2 ((::) {nil1 = True, nil2} p ps) =
+followChain penv1 penv2 fenv1 fenv2 (Update {nil1 = True, nil2} p f ps) =
   let xs = followChain penv1 penv2 fenv1 fenv2 ps in
   foldMap {t = List} id
     ( if nil2
@@ -174,19 +172,17 @@ collectTypeErrs penv1 penv2 fenv1 fenv2 (Fix x p) =
     p
 collectTypeErrs penv1 penv2 fenv1 fenv2 (Map f p) =
   collectTypeErrs penv1 penv2 fenv1 fenv2 p
-collectTypeErrs penv1 penv2 fenv1 fenv2 (WithState f p) =
-  collectTypeErrs penv1 penv2 fenv1 fenv2 p
 collectTypeErrs penv1 penv2 fenv1 fenv2 (WithBounds p) =
   collectTypeErrs penv1 penv2 fenv1 fenv2 p
 
 collectChainTypeErrs penv1 penv2 fenv1 fenv2 [] = []
-collectChainTypeErrs penv1 penv2 fenv1 fenv2 ((::) {nil1 = False} p ps) =
+collectChainTypeErrs penv1 penv2 fenv1 fenv2 (Update {nil1 = False} p f ps) =
   let sets = [follow penv1 penv2 fenv1 fenv2 p, peekChain (penv2 ++ penv1) ps] in
   (  (if disjoint @{set} sets then [] else [SeqAmbiguous $ map toList sets])
   ++ collectTypeErrs penv1 penv2 fenv1 fenv2 p
   )
   :: collectChainTypeErrs [<] (penv2 ++ penv1) [<] (fenv2 ++ fenv1) ps
-collectChainTypeErrs penv1 penv2 fenv1 fenv2 ((::) {nil1 = True} p ps) =
+collectChainTypeErrs penv1 penv2 fenv1 fenv2 (Update {nil1 = True} p f ps) =
   let sets = [follow penv1 penv2 fenv1 fenv2 p, peekChain penv2 ps] in
   (  (if disjoint @{set} sets then [] else [SeqAmbiguous $ map toList sets])
   ++ collectTypeErrs penv1 penv2 fenv1 fenv2 p
