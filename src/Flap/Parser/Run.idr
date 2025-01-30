@@ -12,14 +12,16 @@ import Data.So
 import Flap.Data.List
 
 public export
-data ParseErr : Type -> Type where
-  BadEOF : (expected : List tok) -> ParseErr tok
-  Unexpected : (expected : List tok) -> (got : WithBounds $ Token tok) -> ParseErr tok
-  MapFail : (msg : String) -> ParseErr tok
+data ParseErr : (error, tok : Type) -> Type where
+  BadEOF : (expected : List tok) -> ParseErr error tok
+  Unexpected : (expected : List tok) -> (got : WithBounds $ Token tok) -> ParseErr error tok
+  MapFail : (e : error) -> ParseErr error tok
 
 public export
-ParseResult : {state, tok : Type} -> state -> List (WithBounds $ Token tok) -> Bool -> (state -> Type) -> Type
-ParseResult s xs equal t = Result (ParseErr tok) xs equal (t s)
+ParseResult :
+  {state, tok : Type} ->
+  (error : Type) -> state -> List (WithBounds $ Token tok) -> Bool -> (state -> Type) -> Type
+ParseResult error s xs equal t = Result (ParseErr error tok) xs equal (t s)
 
 ||| Searches `sets` for the first occurence of `x`.
 ||| On failure, returns the index for the nil element, if it exists.
@@ -43,7 +45,7 @@ lookahead x (nil :: nils) (set :: sets) =
 
 parser :
   (set : Set tok t) =>
-  (p : Parser state tok nil locked free a) ->
+  (p : Parser state error tok nil locked free a) ->
   (penv1 : All (Assoc0 $ const t) locked) ->
   (penv2 : All (Assoc0 $ const t) free) ->
   (xs : List (WithBounds (Token tok))) ->
@@ -52,18 +54,18 @@ parser :
     (Assoc0 (\x =>
       (ys : List (WithBounds (Token tok))) -> (0 _ : SuffixOf False ys xs) ->
       (s : state) ->
-      uncurry (ParseResult s ys) x))
+      uncurry (ParseResult error s ys) x))
     locked ->
   All
     (Assoc0 (\x =>
       (ys : List (WithBounds (Token tok))) -> (0 _ : SuffixOf True ys xs) ->
       (s : state) ->
-      uncurry (ParseResult s ys) x))
+      uncurry (ParseResult error s ys) x))
     free ->
-  ParseResult s xs nil a
+  ParseResult error s xs nil a
 parserChain :
   (set : Set tok t) =>
-  (ps : ParserChain state tok nil locked free as) ->
+  (ps : ParserChain state error tok nil locked free as) ->
   (penv1 : All (Assoc0 $ const t) locked) ->
   (penv2 : All (Assoc0 $ const t) free) ->
   (xs : List (WithBounds (Token tok))) ->
@@ -72,20 +74,20 @@ parserChain :
     (Assoc0 (\x =>
       (ys : List (WithBounds (Token tok))) -> (0 _ : SuffixOf False ys xs) ->
       (s : state) ->
-      uncurry (ParseResult s ys) x))
+      uncurry (ParseResult error s ys) x))
     locked ->
   All
     (Assoc0 (\x =>
       (ys : List (WithBounds (Token tok))) -> (0 _ : SuffixOf True ys xs) ->
       (s : state) ->
-      uncurry (ParseResult s ys) x))
+      uncurry (ParseResult error s ys) x))
     free ->
-  ParseResult s xs nil (flip Sequence as)
+  ParseResult error s xs nil (flip Sequence as)
 parserOneOf :
   (set : Set tok t) =>
   {nils : List Bool} ->
   (at : Any (const ()) nils) ->
-  (ps : All (\nil => Parser state tok nil locked free a) nils) ->
+  (ps : All (\nil => Parser state error tok nil locked free a) nils) ->
   (penv1 : All (Assoc0 $ const t) locked) ->
   (penv2 : All (Assoc0 $ const t) free) ->
   (xs : List (WithBounds (Token tok))) ->
@@ -94,15 +96,15 @@ parserOneOf :
     (Assoc0 (\x =>
       (ys : List (WithBounds (Token tok))) -> (0 _ : SuffixOf False ys xs) ->
       (s : state) ->
-      uncurry (ParseResult s ys) x))
+      uncurry (ParseResult error s ys) x))
     locked ->
   All
     (Assoc0 (\x =>
       (ys : List (WithBounds (Token tok))) -> (0 _ : SuffixOf True ys xs) ->
       (s : state) ->
-      uncurry (ParseResult s ys) x))
+      uncurry (ParseResult error s ys) x))
     free ->
-  ParseResult s xs (any Prelude.id nils) a
+  ParseResult error s xs (any Prelude.id nils) a
 
 parser (Var x) penv1 penv2 xs s env1 env2 = (indexAll x.pos env2).value xs Refl s
 parser (Lit text) penv1 penv2 xs s env1 env2 =
@@ -129,7 +131,7 @@ parser (Fix {a, nil} x p) penv1 penv2 xs s env1 env2 =
   let f = parser p (penv1 :< (x :- peek penv2 (Fix x p))) penv2 in
   wfInd
     {rel = Irrelevant .: SuffixOf False}
-    {P = \ys => (0 prf : SuffixOf True ys xs) -> (s : state) -> ParseResult s ys nil a}
+    {P = \ys => (0 prf : SuffixOf True ys xs) -> (s : state) -> ParseResult error s ys nil a}
     (\ys, rec, prf, s =>
       f ys s
         (  mapProperty (map $ \f, zs, 0 prf' => f zs $ trans prf' prf) env1
@@ -190,7 +192,7 @@ parserOneOf {nils = nil :: nils} (There at) (p :: ps) penv1 penv2 xs s env1 env2
 export
 parse :
   (set : Set tok t) =>
-  (p : Parser state tok nil [<] [<] a) ->
+  (p : Parser state error tok nil [<] [<] a) ->
   {auto 0 wf : collectTypeErrs @{set} [<] [<] [<] [<] p = []} ->
-  ParseT state (ParseErr tok) (WithBounds $ Token tok) nil a
+  ParseT state (ParseErr error tok) (WithBounds $ Token tok) nil a
 parse p = MkParseT (\s, xs => parser @{set} p [<] [<] xs s [<] [<])

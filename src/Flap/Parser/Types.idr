@@ -15,18 +15,18 @@ public export
 peek :
   Set tok t =>
   (env : All (Assoc0 $ const t) free) ->
-  Parser state tok nil locked free a -> t
+  Parser state error tok nil locked free a -> t
 public export
 peekChain :
   Set tok t =>
   (env : All (Assoc0 $ const t) free) ->
-  ParserChain state tok nil locked free a -> t
+  ParserChain state error tok nil locked free a -> t
 public export
 peekAll :
   Set tok t =>
   (env : All (Assoc0 $ const t) free) ->
   {0 nils : List Bool} ->
-  All (\nil => Parser state tok nil locked free a) nils ->
+  All (\nil => Parser state error tok nil locked free a) nils ->
   All (const t) nils
 
 peek env (Var x) = (indexAll x.pos env).value
@@ -51,7 +51,7 @@ follow :
   (penv2 : All (Assoc0 $ const t) free) ->
   (fenv1 : All (Assoc0 $ const t) locked) ->
   (fenv2 : All (Assoc0 $ const t) free) ->
-  Parser state tok nil locked free a -> t
+  Parser state error tok nil locked free a -> t
 public export
 followChain :
   Set tok t =>
@@ -59,7 +59,7 @@ followChain :
   (penv2 : All (Assoc0 $ const t) free) ->
   (fenv1 : All (Assoc0 $ const t) locked) ->
   (fenv2 : All (Assoc0 $ const t) free) ->
-  ParserChain state tok nil locked free a -> t
+  ParserChain state error tok nil locked free a -> t
 public export
 followAll :
   Set tok t =>
@@ -68,7 +68,7 @@ followAll :
   (fenv1 : All (Assoc0 $ const t) locked) ->
   (fenv2 : All (Assoc0 $ const t) free) ->
   {0 nils : List Bool} ->
-  All (\nil => Parser state tok nil locked free a) nils ->
+  All (\nil => Parser state error tok nil locked free a) nils ->
   t
 
 follow penv1 penv2 fenv1 fenv2 (Var x) = (indexAll x.pos fenv2).value
@@ -127,7 +127,7 @@ collectTypeErrs :
  (penv2 : All (Assoc0 $ const t) free) ->
  (fenv1 : All (Assoc0 $ const t) locked) ->
  (fenv2 : All (Assoc0 $ const t) free) ->
- Parser state tok nil locked free a ->
+ Parser state error tok nil locked free a ->
  List (Err tok)
 
 public export
@@ -137,7 +137,7 @@ collectChainTypeErrs:
  (penv2 : All (Assoc0 $ const t) free) ->
  (fenv1 : All (Assoc0 $ const t) locked) ->
  (fenv2 : All (Assoc0 $ const t) free) ->
- ParserChain state tok nil locked free a ->
+ ParserChain state error tok nil locked free a ->
  List (List (Err tok))
 
 public export
@@ -148,7 +148,7 @@ collectAllTypeErrs:
  (fenv1 : All (Assoc0 $ const t) locked) ->
  (fenv2 : All (Assoc0 $ const t) free) ->
  {0 nils : List Bool} ->
- All (\nil => Parser state tok nil locked free a) nils ->
+ All (\nil => Parser state error tok nil locked free a) nils ->
  List (List (Err tok))
 
 collectTypeErrs penv1 penv2 fenv1 fenv2 (Var j) = []
