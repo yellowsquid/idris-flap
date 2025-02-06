@@ -13,8 +13,11 @@ Context a = SnocList (Assoc a)
 
 public export
 (.names) : Context a -> SnocList String
-[<].names = [<]
-(ctx :< nx).names = ctx.names :< nx.name
+(.names) = map name
+
+public export
+(.values) : Context a -> SnocList a
+(.values) = map value
 
 export
 mapNames : (0 f : a -> b) -> (ctx : Context a) -> (map (map f) ctx).names = ctx.names
