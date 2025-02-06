@@ -110,22 +110,22 @@ parser (Var x) penv1 penv2 xs s env1 env2 = (indexAll x.pos env2).value xs Refl 
 parser (Lit text) penv1 penv2 xs s env1 env2 =
   let toks : t = singleton text in
   case xs of
-    [] => Err (BadEOF [text])
+    [] => Err (BadEOF [text] ::: [])
     (x :: xs) =>
       if x.val.kind `member` toks
       then Ok x.val.text xs (Step Refl)
-      else Err (Unexpected [text] x)
+      else Err (Unexpected [text] x ::: [])
 parser (Seq ps) penv1 penv2 xs s env1 env2 =
   parserChain ps penv1 penv2 xs s env1 env2
 parser (OneOf {nils} ps) penv1 penv2 [] s env1 env2 =
   let sets = peekAll penv2 ps in
   case lookahead @{set} Nothing nils sets of
-    Nothing => Err (BadEOF $ foldMap toList $ forget sets)
+    Nothing => Err (BadEOF (foldMap toList $ forget sets) ::: [])
     Just at => parserOneOf at ps penv1 penv2 [] s env1 env2
 parser (OneOf {nils} ps) penv1 penv2 (x :: xs) s env1 env2 =
   let sets = peekAll penv2 ps in
   case lookahead (Just x.val.kind) nils sets of
-    Nothing => Err (Unexpected (foldMap toList $ forget sets) x)
+    Nothing => Err (Unexpected (foldMap toList $ forget sets) x ::: [])
     Just at => parserOneOf at ps penv1 penv2 (x :: xs) s env1 env2
 parser (Fix {a, nil} x p) penv1 penv2 xs s env1 env2 =
   let f = parser p (penv1 :< (x :- peek penv2 (Fix x p))) penv2 in
@@ -142,9 +142,10 @@ parser (Fix {a, nil} x p) penv1 penv2 xs s env1 env2 =
 parser (Map f p) penv1 penv2 xs s env1 env2 =
   case parser p penv1 penv2 xs s env1 env2 of
     Err e => Err e
+    SoftErr errs ys prf => SoftErr errs ys prf
     Ok res ys prf =>
       case f res of
-        Left err => Err (MapFail err)
+        Left err => SoftErr (MapFail err ::: []) ys prf
         Right res' => Ok res' ys prf
 parser (WithBounds p) penv1 penv2 xs s env1 env2 =
   let (irrel, bnds) = bounds xs in
@@ -157,20 +158,37 @@ parser (Forget f p) penv1 penv2 xs s env1 env2 =
   parser @{set} p [<] [<] xs (f s) [<] [<]
 
 parserChain [] penv1 penv2 xs s env1 env2 = Ok [] xs Refl
-parserChain (Update {nil1 = False, nil2} p f ps) penv1 penv2 xs s env1 env2 = do
+parserChain (Update {nil1 = False, nil2} p (Just f) ps) penv1 penv2 xs s env1 env2 = do
   x <- parser p penv1 penv2 xs s env1 env2
-  xs <- parserChain ps [<] (penv2 ++ penv1) _ (doUpdate f s x)
+  xs <- parserChain ps [<] (penv2 ++ penv1) _ (f s x)
           [<]
           (  mapProperty (map (\f, zs, 0 prf, s => f zs (wkn (const Oh) $ trans {b2 = False} prf %search) s)) env2
           ++ mapProperty (map (\f, zs, 0 prf, s => f zs (trans {b2 = False} prf %search) s)) env1
           )
   pure (x :: xs)
-parserChain (Update {nil1 = True, nil2} p f ps) penv1 penv2 xs s env1 env2 = do
+parserChain (Update {nil1 = False, nil2} p Nothing ps) penv1 penv2 xs s env1 env2 = do
+  (x, xs) <-
+    (parser p penv1 penv2 _ s env1 env2) <**>
+    (parserChain ps [<] (penv2 ++ penv1) _ s
+      [<]
+      (  mapProperty (map (\f, zs, 0 prf, s => f zs (wkn (const Oh) $ trans {b2 = False} prf %search) s)) env2
+      ++ mapProperty (map (\f, zs, 0 prf, s => f zs (trans {b2 = False} prf %search) s)) env1
+      ))
+  pure (x :: xs)
+parserChain (Update {nil1 = True, nil2} p (Just f) ps) penv1 penv2 xs s env1 env2 = do
   x <- parser p penv1 penv2 xs s env1 env2
   rewrite sym $ andTrueNeutral nil2
-  xs <- parserChain ps penv1 penv2 _ (doUpdate f s x)
+  xs <- parserChain ps penv1 penv2 _ (f s x)
           (mapProperty (map (\f, zs, prf => f zs $ trans {b2 = True} prf %search)) env1)
           (mapProperty (map (\f, zs, prf => f zs $ trans {b2 = True} prf %search)) env2)
+  pure (x :: xs)
+parserChain (Update {nil1 = True, nil2} p Nothing ps) penv1 penv2 xs s env1 env2 = do
+  rewrite sym $ andTrueNeutral nil2
+  (x, xs) <-
+    (parser p penv1 penv2 xs s env1 env2) <**>
+    (parserChain ps penv1 penv2 _ s
+      (mapProperty (map (\f, zs, prf => f zs $ trans {b2 = True} prf %search)) env1)
+      (mapProperty (map (\f, zs, prf => f zs $ trans {b2 = True} prf %search)) env2))
   pure (x :: xs)
 
 anyCons :
