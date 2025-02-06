@@ -72,7 +72,7 @@ data ParserChain where
   Update :
     {nil1, nil2 : Bool} ->
     Parser state error tok nil1 locked free a ->
-    (f : (s : state) -> a s -> state) ->
+    (f : Maybe ((s : state) -> a s -> state)) ->
     ParserChain state error tok nil2 (linUnless nil1 locked) (free ++ linUnless (not nil1) locked) as ->
     ParserChain state error tok (nil1 && nil2) locked free (MkStage a f :: as)
 

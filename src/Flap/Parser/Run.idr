@@ -159,7 +159,7 @@ parser (Forget f p) penv1 penv2 xs s env1 env2 =
 parserChain [] penv1 penv2 xs s env1 env2 = Ok [] xs Refl
 parserChain (Update {nil1 = False, nil2} p f ps) penv1 penv2 xs s env1 env2 = do
   x <- parser p penv1 penv2 xs s env1 env2
-  xs <- parserChain ps [<] (penv2 ++ penv1) _ (f s x)
+  xs <- parserChain ps [<] (penv2 ++ penv1) _ (doUpdate f s x)
           [<]
           (  mapProperty (map (\f, zs, 0 prf, s => f zs (wkn (const Oh) $ trans {b2 = False} prf %search) s)) env2
           ++ mapProperty (map (\f, zs, 0 prf, s => f zs (trans {b2 = False} prf %search) s)) env1
@@ -168,7 +168,7 @@ parserChain (Update {nil1 = False, nil2} p f ps) penv1 penv2 xs s env1 env2 = do
 parserChain (Update {nil1 = True, nil2} p f ps) penv1 penv2 xs s env1 env2 = do
   x <- parser p penv1 penv2 xs s env1 env2
   rewrite sym $ andTrueNeutral nil2
-  xs <- parserChain ps penv1 penv2 _ (f s x)
+  xs <- parserChain ps penv1 penv2 _ (doUpdate f s x)
           (mapProperty (map (\f, zs, prf => f zs $ trans {b2 = True} prf %search)) env1)
           (mapProperty (map (\f, zs, prf => f zs $ trans {b2 = True} prf %search)) env2)
   pure (x :: xs)

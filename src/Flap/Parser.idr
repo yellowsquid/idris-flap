@@ -11,8 +11,8 @@ public export
   {nil1, nil2 : Bool} ->
   Parser state error tok nil1 locked free a ->
   ParserChain state error tok nil2 (linUnless nil1 locked) (free ++ linUnless (not nil1) locked) as ->
-  ParserChain state error tok (nil1 && nil2) locked free (MkStage a (\s, _ => s) :: as)
-p :: ps = Update p (\s, _ => s) ps
+  ParserChain state error tok (nil1 && nil2) locked free (MkStage a Nothing :: as)
+p :: ps = Update p Nothing ps
 
 %inline
 public export

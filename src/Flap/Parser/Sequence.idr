@@ -4,7 +4,18 @@ public export
 record Stage (state : Type) where
   constructor MkStage
   family : state -> Type
-  update : (s : state) -> family s -> state
+  update : Maybe ((s : state) -> family s -> state)
+
+public export
+doUpdate :
+  {0 a : state -> Type} ->
+  Maybe ((s : state) -> a s -> state) -> (s : state) -> a s -> state
+doUpdate Nothing s x = s
+doUpdate (Just f) s x = f s x
+
+public export
+(.run) : (stage : Stage state) -> (s : state) -> stage .family s -> state
+stage .run = doUpdate (stage .update)
 
 public export
 data Sequence :
@@ -13,5 +24,5 @@ data Sequence :
   Nil : Sequence s []
   (::) :
     (x : stage .family s) ->
-    Sequence (stage .update s x) seq ->
+    Sequence (stage .run s x) seq ->
     Sequence s (stage :: seq)
