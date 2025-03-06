@@ -4,6 +4,17 @@ import public Flap.Parser.Run
 
 import Data.List1
 
+-- Utility for stateless parsers -----------------------------------------------
+
+public export
+Parser :
+  (error, tok : Type) -> (nil : Bool) -> (locked, free : Context (Bool, Type)) -> Type -> Type
+Parser error tok nil locked free a =
+  Parser () error tok nil
+    (map (map $ mapSnd const) locked)
+    (map (map $ mapSnd const) free)
+    (const a)
+
 -- Functor ---------------------------------------------------------------------
 
 public export
