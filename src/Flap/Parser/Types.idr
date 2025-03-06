@@ -11,7 +11,8 @@ interface Monoid t => Set (0 tok : Type) t | t where
   disjoint  : t -> t -> Bool
   toList    : t -> List tok
 
-  disjoint x y = null $ toList $ intersect x y
+  disjoint x y =
+    Prelude.Interfaces.null $ Flap.Parser.Types.toList $ Flap.Parser.Types.intersect x y
 
 public export
 allDisjoint : Set tok t => List t -> Bool
