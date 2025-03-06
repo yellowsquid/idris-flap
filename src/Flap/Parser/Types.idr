@@ -1,15 +1,22 @@
 module Flap.Parser.Types
 
--- import public Control.Algebra
 import Data.So
 import Flap.Parser.Core
 
 public export
-interface Monoid t => Set (0 tok : Type) t where
+interface Monoid t => Set (0 tok : Type) t | t where
   singleton : tok -> t
-  member : tok -> t -> Bool
+  member    : tok -> t -> Bool
   intersect : t -> t -> t
-  toList : t -> List tok
+  disjoint  : t -> t -> Bool
+  toList    : t -> List tok
+
+  disjoint x y = null $ toList $ intersect x y
+
+public export
+allDisjoint : Set tok t => List t -> Bool
+allDisjoint []        = True
+allDisjoint (x :: xs) = all (disjoint x) xs && allDisjoint xs
 
 public export
 peek :
@@ -117,12 +124,6 @@ enumerate : List a -> List (Nat, a)
 enumerate = reverse . fst . foldl (\(acc, n), x => ((n, x) :: acc, S n)) ([], 0)
 
 public export
-disjoint : (set : Set tok t) => List t -> Bool
-disjoint [] = True
-disjoint (xs :: xss) =
-  all (null . toList @{set} . intersect @{set} xs) xss && disjoint @{set} xss
-
-public export
 collectTypeErrs :
  (set : Set tok t) =>
  (penv1 : All (Assoc0 $ const t) locked) ->
@@ -161,7 +162,7 @@ collectTypeErrs penv1 penv2 fenv1 fenv2 (Seq ps) =
 collectTypeErrs penv1 penv2 fenv1 fenv2 (OneOf ps) =
   let errs = collectAllTypeErrs penv1 penv2 fenv1 fenv2 ps in
   let peeked = forget $ peekAll penv2 ps in
-  (if disjoint @{set} peeked then [] else [AltAmbiguous $ map toList peeked]) ++
+  (if allDisjoint @{set} peeked then [] else [AltAmbiguous $ map toList peeked]) ++
   foldMap (\(n, es) => map (Branch n) es) (enumerate errs)
 collectTypeErrs penv1 penv2 fenv1 fenv2 (Fix x p) =
   let peeked = peek penv2 (Fix x p) in
@@ -182,13 +183,13 @@ collectTypeErrs penv1 penv2 fenv1 fenv2 (Forget f p) =
 collectChainTypeErrs penv1 penv2 fenv1 fenv2 [] = []
 collectChainTypeErrs penv1 penv2 fenv1 fenv2 (Update {nil1 = False} p f ps) =
   let sets = [follow penv1 penv2 fenv1 fenv2 p, peekChain (penv2 ++ penv1) ps] in
-  (  (if disjoint @{set} sets then [] else [SeqAmbiguous $ map toList sets])
+  (  (if allDisjoint @{set} sets then [] else [SeqAmbiguous $ map toList sets])
   ++ collectTypeErrs penv1 penv2 fenv1 fenv2 p
   )
   :: collectChainTypeErrs [<] (penv2 ++ penv1) [<] (fenv2 ++ fenv1) ps
 collectChainTypeErrs penv1 penv2 fenv1 fenv2 (Update {nil1 = True} p f ps) =
   let sets = [follow penv1 penv2 fenv1 fenv2 p, peekChain penv2 ps] in
-  (  (if disjoint @{set} sets then [] else [SeqAmbiguous $ map toList sets])
+  (  (if allDisjoint @{set} sets then [] else [SeqAmbiguous $ map toList sets])
   ++ collectTypeErrs penv1 penv2 fenv1 fenv2 p
   )
   :: collectChainTypeErrs penv1 penv2 fenv1 fenv2 ps
