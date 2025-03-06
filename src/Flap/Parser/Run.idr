@@ -211,8 +211,8 @@ parserOneOf {nils = nil :: nils} (There at) (p :: ps) penv1 penv2 xs s env1 env2
 
 export
 parse :
-  (set : Set tok t) =>
+  (set : Set tok t) ->
   (p : Parser state error tok nil [<] [<] a) ->
-  {auto 0 wf : collectTypeErrs @{set} [<] [<] [<] [<] p = []} ->
+  {auto 0 wf : WellFormed set p} ->
   ParseT state (ParseErr error tok) (WithBounds $ Token tok) nil a
-parse p = MkParseT (\s, xs => parser @{set} p [<] [<] xs s [<] [<])
+parse set p = MkParseT (\s, xs => parser @{set} p [<] [<] xs s [<] [<])

@@ -197,3 +197,7 @@ collectChainTypeErrs penv1 penv2 fenv1 fenv2 (Update {nil1 = True} p f ps) =
 collectAllTypeErrs penv1 penv2 fenv1 fenv2 [] = []
 collectAllTypeErrs penv1 penv2 fenv1 fenv2 (p :: ps) =
   collectTypeErrs penv1 penv2 fenv1 fenv2 p :: collectAllTypeErrs penv1 penv2 fenv1 fenv2 ps
+
+public export
+WellFormed : Set tok t -> Parser state error tok nil [<] [<] a -> Type
+WellFormed set p = toList (collectTypeErrs @{set} [<] [<] [<] [<] p) === []
