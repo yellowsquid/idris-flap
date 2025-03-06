@@ -1,0 +1,8 @@
+package examples
+authors = "Greg Brown"
+
+options = "--total"
+
+depends = contrib, flap
+
+modules = Arithmetic
