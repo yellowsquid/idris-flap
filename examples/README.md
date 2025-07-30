@@ -3,6 +3,7 @@
 Here are some examples of how to use `flap` of increasing complexity.
 
 1. `Arithmetic` shows how to parse arithmetic expressions.
+2. `DepType` shows how to include state in the parser.
 
 ## General Strategy
 
