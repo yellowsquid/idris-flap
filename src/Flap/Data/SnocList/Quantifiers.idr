@@ -21,10 +21,6 @@ tail : All p (sx :< x) -> All p sx
 tail (prfs :< px) = prfs
 
 public export
-HSnocList : SnocList Type -> Type
-HSnocList = All id
-
-public export
 all :
   ((x : a) -> LazyEither (p x) (q x)) ->
   (sx : SnocList a) -> LazyEither (All p sx) (Any q sx)
